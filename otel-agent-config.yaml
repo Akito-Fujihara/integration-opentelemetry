@@ -1,0 +1,23 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+processors:
+  batch:
+
+exporters:
+  awsxray:
+    region: 'ap-northeast-1'
+
+service:
+  telemetry:
+    logs:
+      level: "DEBUG"
+  pipelines:
+    traces:
+      receivers:
+        - otlp
+      exporters:
+        - awsxray

@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_USER: root
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: echo_server
+      MYSQL_USER: echo_server
+      MYSQL_PASSWORD: password
+      TZ: "Asia/Tokyo"
+    volumes:
+      - ./my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./mysql:/var/lib/mysql
+    ports:
+      - "3366:3306"
+
+  echo_server:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: echo_server
+    working_dir: /server
+    environment:
+      MYSQL_DATABASE: echo_server
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: echo_server
+      MYSQL_PASSWORD: password
+      OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector:4317"
+    volumes:
+      - .:/server
+    tty: true
+    ports:
+      - "8085:8080"
+      - "14268:14268"
+    depends_on:
+      - mysql
+      - otel-collector
+
+  otel-collector:
+    container_name: otel-collector
+    image: public.ecr.aws/aws-observability/aws-otel-collector:latest
+    command: [ "--config=/etc/otel-agent-config.yaml" ]
+    volumes:
+      - ./otel-agent-config.yaml:/etc/otel-agent-config.yaml
+    environment:
+      AWS_REGION: ap-northeast-1
+      AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+      AWS_SESSION_TOKEN: $AWS_SESSION_TOKEN
+    ports:
+      - 4317:4317
+
+volumes:
+  mysql:
